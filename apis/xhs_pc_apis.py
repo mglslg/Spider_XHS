@@ -1,7 +1,6 @@
 # encoding: utf-8
 import json
 import re
-import time
 import urllib
 import requests
 from xhs_utils.xhs_util import splice_str, generate_request_params, generate_x_b3_traceid, get_common_headers
@@ -184,15 +183,9 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api)
-
-            time.sleep(5)
             response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
-
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
-
-            logger.info(f'params:{params},response_text: {response.text}')
-
         except Exception as e:
             success = False
             msg = str(e)
@@ -316,16 +309,9 @@ class XHS_Apis():
             }
             splice_api = splice_str(api, params)
             headers, cookies, data = generate_request_params(cookies_str, splice_api)
-
-            # 不能爬太猛
-            time.sleep(5)
             response = requests.get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies)
-
             res_json = response.json()
             success, msg = res_json["success"], res_json["msg"]
-
-            logger.info(f'params:{params},response: {response.text}')
-
         except Exception as e:
             success = False
             msg = str(e)
