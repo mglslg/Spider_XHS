@@ -1,6 +1,7 @@
 # encoding: utf-8
 import json
 import re
+import time
 import urllib
 import requests
 from xhs_utils.xhs_util import splice_str, generate_request_params, generate_x_b3_traceid, get_common_headers
@@ -209,6 +210,11 @@ class XHS_Apis():
             xsec_token = kvDist['xsec_token'] if 'xsec_token' in kvDist else ""
             xsec_source = kvDist['xsec_source'] if 'xsec_source' in kvDist else "pc_search"
             while True:
+
+                logger.info(f'分页查笔记数据 {user_id}: {cursor}')
+
+                time.sleep(3)  # 分页查数据,限速3秒
+
                 success, msg, res_json = self.get_user_note_info(user_id, cursor, cookies_str, xsec_token, xsec_source, proxies)
                 if not success:
                     raise Exception(msg)

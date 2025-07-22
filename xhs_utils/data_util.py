@@ -248,6 +248,9 @@ def save_note_detail(note, path):
 
 @retry(tries=3, delay=1)
 def download_note(note_info, path, save_choice):
+
+    logger.info(f'下载笔记资源:{path}')
+
     note_id = note_info['note_id']
     user_id = note_info['user_id']
     title = note_info['title']
