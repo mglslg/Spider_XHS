@@ -122,7 +122,7 @@ class SlgDataSpider:
                     note_list.append(note_url)
             if save_choice == 'all' or save_choice == 'excel':
                 excel_name = query
-            self.spider_some_note(note_list, cookies_str, base_path, save_choice, excel_name, proxies)
+            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name, proxies)
         except Exception as e:
             success = False
             msg = e
@@ -148,8 +148,9 @@ class SlgDataSpider:
                     note_list.append(note_url)
             if save_choice == 'all' or save_choice == 'excel':
                 excel_name = user_url.split('/')[-1].split('?')[0]
-                file_path = os.path.abspath(os.path.join(base_path['excel'], f'{excel_name}.xlsx'))
-                save_to_xlsx(note_list, file_path)
+
+            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name, proxies)
+
         except Exception as e:
             success = False
             msg = e
@@ -173,8 +174,8 @@ if __name__ == '__main__':
     # data_spider.spider_user_all_note(slg_url, cookies_str, base_path, 'excel')
 
     # 爬取用户所有收藏
-    collection_url = 'https://www.xiaohongshu.com/user/profile/687b56f9000000001d027c47?tab=fav&subTab=note'
-    data_spider.spider_user_all_collection(collection_url, cookies_str, base_path, 'all')
+    collection_url = 'https://www.xiaohongshu.com/user/profile/621ae401000000001000e193?tab=fav&subTab=note'
+    data_spider.spider_user_all_collection(collection_url, cookies_str, base_path, 'excel')
 
     # 搜索指定关键词的笔记
     query = "小红书开店踩坑"
