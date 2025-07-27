@@ -28,4 +28,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+datas/
+env_config/
 

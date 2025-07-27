@@ -1,25 +1,22 @@
 import os
-import time
 from loguru import logger
-from apis.xhs_pc_apis import XHS_Apis
+
+from apis.slg_xhs_pc_apis import SlgXhsApi
 from xhs_utils.common_util import init
 from xhs_utils.data_util import handle_note_info, download_note, save_to_xlsx
 
 
 class SlgDataSpider:
     def __init__(self):
-        self.xhs_apis = XHS_Apis()
+        self.xhs_apis = SlgXhsApi()
 
-    def spider_note_data(self, note_url: str, cookies_str: str, proxies=None):
+    def spider_note_data(self, note_url: str, cookies_str: str):
         """
         爬取一个笔记的信息
-        :param note_url:
-        :param cookies_str:
-        :return:
         """
         note_info = None
         try:
-            success, msg, note_info = self.xhs_apis.get_note_info(note_url, cookies_str, proxies)
+            success, msg, note_info = self.xhs_apis.get_note_info(note_url, cookies_str, None)
             if success:
                 note_info = note_info['data']['items'][0]
                 note_info['url'] = note_url
@@ -30,51 +27,42 @@ class SlgDataSpider:
         logger.info(f'爬取笔记信息 {note_url}: {success}, msg: {msg}')
         return success, msg, note_info
 
-    def spider_list_and_save(self, notes: list, cookies_str: str, base_path: dict, save_choice: str, excel_name: str = '',
-                         proxies=None):
+    def spider_list_and_save(self, notes: list, cookies_str: str, base_path: dict, save_choice: str,
+                             excel_name: str = '', break_point: str = ''):
         """
-        爬取一些笔记的信息
-        :param notes:
-        :param cookies_str:
-        :param base_path:
-        :return:
+        爬取笔记信息并保存
         """
         if (save_choice == 'all' or save_choice == 'excel') and excel_name == '':
             raise ValueError('excel_name 不能为空')
         note_list = []
 
         for note_url in notes:
-
-            time.sleep(2)  # 限速
-
-            success, msg, note_info = self.spider_note_data(note_url, cookies_str, proxies)
+            success, msg, note_info = self.spider_note_data(note_url, cookies_str)
 
             if note_info is not None and success:
                 note_list.append(note_info)
 
+            if note_info.get('note_id') == break_point:
+                break
+
         for note_info in note_list:
             if save_choice == 'all' or 'media' in save_choice:
-
-                time.sleep(1)  # 限速
-
-                download_note(note_info, base_path['media'], save_choice)
+                static_path = base_path['media']
+                logger.info(f'下载笔记静态资源:{static_path}')
+                download_note(note_info, static_path, save_choice)
 
         if save_choice == 'all' or save_choice == 'excel':
             file_path = os.path.abspath(os.path.join(base_path['excel'], f'{excel_name}.xlsx'))
             save_to_xlsx(note_list, file_path)
 
     def spider_user_all_note(self, user_url: str, cookies_str: str, base_path: dict, save_choice: str,
-                             excel_name: str = '', proxies=None):
+                             excel_name: str = '', break_point: str = ''):
         """
         爬取一个用户的所有笔记
-        :param user_url:
-        :param cookies_str:
-        :param base_path:
-        :return:
         """
         note_list = []
         try:
-            success, msg, all_note_info = self.xhs_apis.get_user_all_notes(user_url, cookies_str, proxies)
+            success, msg, all_note_info = self.xhs_apis.get_user_all_notes_ext(user_url, cookies_str, None, break_point)
 
             if success:
                 logger.info(f'用户 {user_url} 作品数量: {len(all_note_info)}')
@@ -83,9 +71,11 @@ class SlgDataSpider:
                     note_list.append(note_url)
 
             if save_choice == 'all' or save_choice == 'excel':
-                excel_name = user_url.split('/')[-1].split('?')[0]
+                if not excel_name:
+                    excel_name = user_url.split('/')[-1].split('?')[0]
 
-            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name, proxies)
+            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name,
+                                      break_point)
 
         except Exception as e:
             success = False
@@ -93,9 +83,63 @@ class SlgDataSpider:
         logger.info(f'爬取用户所有作品 {user_url}: {success}, msg: {msg}')
         return note_list, success, msg
 
+    def spider_user_all_collection(self, user_url: str, cookies_str: str, base_path: dict, save_choice: str,
+                                   excel_name: str = '', break_point: str = ''):
+        """
+        爬取一个用户的所有收藏
+        """
+        note_list = []
+        try:
+            success, msg, all_note_info = self.xhs_apis.get_user_all_collect_note_info_ext(user_url, cookies_str, None,
+                                                                                           break_point)
+            if success:
+                logger.info(f'用户 {user_url} 收藏数量: {len(all_note_info)}')
+                for simple_note_info in all_note_info:
+                    note_url = f"https://www.xiaohongshu.com/explore/{simple_note_info['note_id']}?xsec_token={simple_note_info['xsec_token']}"
+                    note_list.append(note_url)
+
+            if save_choice == 'all' or save_choice == 'excel':
+                if not excel_name:
+                    excel_name = user_url.split('/')[-1].split('?')[0]
+
+            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name, break_point)
+
+        except Exception as e:
+            success = False
+            msg = e
+        logger.info(f'爬取用户所有收藏 {user_url}: {success}, msg: {msg}')
+        return note_list, success, msg
+
+    def spider_user_all_like(self, user_url: str, cookies_str: str, base_path: dict, save_choice: str,
+                             excel_name: str = '', break_point: str = ''):
+        """
+        爬取一个用户的所有点赞
+        """
+        note_list = []
+        try:
+            success, msg, all_note_info = self.xhs_apis.get_user_all_like_note_info_ext(user_url, cookies_str, None,
+                                                                                        break_point)
+            if success:
+                logger.info(f'用户 {user_url} 点赞数量: {len(all_note_info)}')
+                for simple_note_info in all_note_info:
+                    note_url = f"https://www.xiaohongshu.com/explore/{simple_note_info['note_id']}?xsec_token={simple_note_info['xsec_token']}"
+                    note_list.append(note_url)
+
+            if save_choice == 'all' or save_choice == 'excel':
+                if not excel_name:
+                    excel_name = user_url.split('/')[-1].split('?')[0]
+
+            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name, break_point)
+
+        except Exception as e:
+            success = False
+            msg = e
+        logger.info(f'爬取用户所有收藏 {user_url}: {success}, msg: {msg}')
+        return note_list, success, msg
+
     def spider_some_search_note(self, query: str, require_num: int, cookies_str: str, base_path: dict, save_choice: str,
                                 sort_type_choice=0, note_type=0, note_time=0, note_range=0, pos_distance=0,
-                                geo: dict = None, excel_name: str = '', proxies=None):
+                                geo: dict = None, excel_name: str = ''):
         """
             指定数量搜索笔记，设置排序方式和笔记类型和笔记数量
             :param query 搜索的关键词
@@ -113,7 +157,7 @@ class SlgDataSpider:
         try:
             success, msg, notes = self.xhs_apis.search_some_note(query, require_num, cookies_str, sort_type_choice,
                                                                  note_type, note_time, note_range, pos_distance, geo,
-                                                                 proxies)
+                                                                 None)
             if success:
                 notes = list(filter(lambda x: x['model_type'] == "note", notes))
                 logger.info(f'搜索关键词 {query} 笔记数量: {len(notes)}')
@@ -122,44 +166,17 @@ class SlgDataSpider:
                     note_list.append(note_url)
             if save_choice == 'all' or save_choice == 'excel':
                 excel_name = query
-            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name, proxies)
+
+            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name)
+
         except Exception as e:
             success = False
             msg = e
         logger.info(f'搜索关键词 {query} 笔记: {success}, msg: {msg}')
         return note_list, success, msg
 
-    def spider_user_all_collection(self, user_url: str, cookies_str: str, base_path: dict, save_choice: str,
-                                   excel_name: str = '', proxies=None):
-        """
-        爬取一个用户的所有收藏
-        :param user_url:
-        :param cookies_str:
-        :param base_path:
-        :return:
-        """
-        note_list = []
-        try:
-            success, msg, all_note_info = self.xhs_apis.get_user_all_collect_note_info(user_url, cookies_str, proxies)
-            if success:
-                logger.info(f'用户 {user_url} 收藏数量: {len(all_note_info)}')
-                for simple_note_info in all_note_info:
-                    note_url = f"https://www.xiaohongshu.com/explore/{simple_note_info['note_id']}?xsec_token={simple_note_info['xsec_token']}"
-                    note_list.append(note_url)
-            if save_choice == 'all' or save_choice == 'excel':
-                excel_name = user_url.split('/')[-1].split('?')[0]
-
-            self.spider_list_and_save(note_list, cookies_str, base_path, save_choice, excel_name, proxies)
-
-        except Exception as e:
-            success = False
-            msg = e
-        logger.info(f'爬取用户所有收藏 {user_url}: {success}, msg: {msg}')
-        return note_list, success, msg
-
 
 if __name__ == '__main__':
-
     cookies_str, base_path = init()
 
     data_spider = SlgDataSpider()
@@ -175,7 +192,8 @@ if __name__ == '__main__':
 
     # 爬取用户所有收藏
     collection_url = 'https://www.xiaohongshu.com/user/profile/621ae401000000001000e193?tab=fav&subTab=note'
-    data_spider.spider_user_all_collection(collection_url, cookies_str, base_path, 'excel')
+    data_spider.spider_user_all_collection(collection_url, cookies_str, base_path, 'excel', '',
+                                           '687f569700000000100243ea')
 
     # 搜索指定关键词的笔记
     query = "小红书开店踩坑"
