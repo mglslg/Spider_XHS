@@ -54,13 +54,19 @@ elif page == "Excel 文件列表":
                 st.rerun()  # 刷新页面以更新列表
         with col4:
             if st.button("同步到notion", key=f"sync_{file_name}"):
-                pass  # 预留，自定义行为
+                with st.spinner('notion同步中……'):
+                    try:
+                        file_path = os.path.join('datas/excel_datas', file_name)
+                        import_xls_to_notion(file_path)
+                        st.success(f"{file_name} 已同步到 Notion！")
+                    except Exception as e:
+                        st.error(f"同步失败: {str(e)}")
         st.divider()
 
 elif page == "给我爬":
     st.header("给我爬")
 
-    breakpoint_id_note = st.text_input("笔记续传断点ID (为空时爬取全量)", value="")
+    breakpoint_id_note = st.text_input("笔记断点ID (为空时爬取全量)", value="")
     if st.button("爬取笔记"):
         try:
             with st.spinner("数据爬取中..."):  # 显示加载转圈
@@ -74,7 +80,7 @@ elif page == "给我爬":
 
     st.divider()
 
-    breakpoint_id_collect = st.text_input("收藏续传断点ID (为空时爬取全量)", value="")
+    breakpoint_id_collect = st.text_input("收藏断点ID (为空时爬取全量)", value="")
     if st.button("爬取收藏"):
         try:
             with st.spinner("数据爬取中..."):  # 显示加载转圈
@@ -88,7 +94,7 @@ elif page == "给我爬":
 
     st.divider()
 
-    breakpoint_id_like = st.text_input("点赞续传断点ID (为空时爬取全量)", value="")
+    breakpoint_id_like = st.text_input("点赞断点ID (为空时爬取全量)", value="")
     if st.button("爬取点赞"):
         try:
             with st.spinner("数据爬取中..."):  # 显示加载转圈

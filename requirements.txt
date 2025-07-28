@@ -5,3 +5,6 @@ python-dotenv
 retry
 openpyxl
 streamlit>=1.32.0
+pandas
+notion-client
+httpx[socks]
