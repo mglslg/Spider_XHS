@@ -19,11 +19,17 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY package*.json ./
+RUN npm install
+
 COPY . .
 
-EXPOSE 5000
+# 给入口脚本执行权限
+RUN chmod +x docker-entrypoint.sh
+
+EXPOSE 8501
 
 ENV PYTHONUNBUFFERED=1
 ENV NODE_ENV=production
 
-CMD ["python", "main.py"] 
+ENTRYPOINT ["./docker-entrypoint.sh"] 

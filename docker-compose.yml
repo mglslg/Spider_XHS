@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  spider-xhs:
+    build: .
+    container_name: spider-xhs-app
+    ports:
+      - "8501:8501"  # Streamlit Web界面端口
+    volumes:
+      # 持久化数据存储
+      - ./datas:/app/datas
+      - ./env_config:/app/env_config
+      # 如果需要本地开发，取消下面注释
+      # - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NODE_ENV=production
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    name: spider-xhs-network
